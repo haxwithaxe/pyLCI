@@ -1,3 +1,12 @@
+def to_be_foreground(func):
+    """A safety check wrapper so that certain checks don't get called if menu is not the one active."""
+    def wrapper(self, *args, **kwargs):
+        if self.in_foreground:
+            return func(self, *args, **kwargs)
+        else:
+            return False
+    return wrapper
+
 def ellipsize(string, length, ellipsis="..."):
     if len(string) <= length:
         return string
@@ -19,7 +28,7 @@ def format_for_screen(data, screen_width, break_words=True, linebreak=None):
             screen_data.append(current_data)
             current_data = ""
             if linebreak is not None:
-                screen_data.append(linebreak) 
+                screen_data.append(linebreak)
         elif len(word) <= screen_width-len(current_data): #Word fits on current line
             current_data += word+" "
         elif not break_words and len(word) <= screen_width:
