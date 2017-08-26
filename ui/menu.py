@@ -3,13 +3,8 @@ from copy import copy
 import logging
 from threading import Event
 
-def to_be_foreground(func): #A safety check wrapper so that certain checks don't get called if menu is not the one active
-    def wrapper(self, *args, **kwargs):
-        if self.in_foreground:
-            return func(self, *args, **kwargs)
-        else:
-            return False
-    return wrapper
+from . import to_be_foreground
+
 
 class MenuExitException(Exception):
     """An exception that you can throw from a menu callback to exit the menu that callback was called from"""
@@ -22,15 +17,15 @@ class Menu():
     Attributes:
 
     * ``contents``: list of menu elements which was passed either to ``Menu`` constructor or to ``menu.set_contents()``.
-       
+
       Menu element structure is a list, where:
          * ``element[0]`` (element's representation) is either a string, which simply has the element's value as it'll be displayed, such as "Menu element 1", or, in case of entry_height > 1, can be a list of strings, each of which represents a corresponding display row occupied by the element.
-         * ``element[1]`` (element's callback) is a function which is called when menu's element is activated (such as pressing ENTER button when menu's element is selected). 
+         * ``element[1]`` (element's callback) is a function which is called when menu's element is activated (such as pressing ENTER button when menu's element is selected).
            * Can be omitted if you don't need to have any actions taken upon activation of the element.
            * Can be specified as 'exit' if you want a menu element that exits the menu upon activation.
 
       *If you want to set contents after the initalisation, please, use set_contents() method.*
-    * ``_contents``: "Working copy" of menu contents, basically, a ``contents`` attribute which has been processed by ``self.process_contents``. 
+    * ``_contents``: "Working copy" of menu contents, basically, a ``contents`` attribute which has been processed by ``self.process_contents``.
     * ``pointer``: currently selected menu element's number in ``self._contents``.
     * ``in_background``: a flag which indicates if menu is currently active, either if being displayed or being in background (for example, if a sub-menu of this menu is currently active)
     * ``in_foreground`` : a flag which indicates if menu is currently displayed. If it's not active, inhibits any of menu's actions which can interfere with other menu or UI element being displayed.
@@ -52,7 +47,7 @@ class Menu():
 
     def __init__(self, contents, i, o, name="Menu", entry_height=1, append_exit=True, catch_exit=True, exitable=True, contents_hook=None, scrolling=True):
         """Initialises the Menu object.
-        
+
         Args:
 
             * ``contents``: a list of values, which can be constructed as described in the Menu object's docstring.
@@ -97,7 +92,7 @@ class Menu():
 
     def to_foreground(self):
         """ Is called when menu's ``activate()`` method is used, sets flags and performs all the actions so that menu can display its contents and receive keypresses. Also, updates the output device with rendered currently displayed menu elements."""
-        logging.info("menu {0} enabled".format(self.name))    
+        logging.info("menu {0} enabled".format(self.name))
         if callable(self.contents_hook):
             new_contents = self.contents_hook()
             old_contents = self._contents
@@ -112,14 +107,14 @@ class Menu():
     def to_background(self):
         """ Signals ``activate`` to finish executing """
         self.in_foreground = False
-        logging.info("menu {0} disabled".format(self.name))    
+        logging.info("menu {0} disabled".format(self.name))
 
     def activate(self):
         """ A method which is called when menu needs to start operating. Is blocking, sets up input&output devices, renders the menu and waits until self.in_background is False, while menu callbacks are executed from the input device thread.
         This method also raises MenuExitException if menu exited due to it and ``catch_exit`` is set to False."""
-        logging.info("menu {0} activated".format(self.name))    
+        logging.info("menu {0} activated".format(self.name))
         self.exit_exception = False
-        self.to_foreground() 
+        self.to_foreground()
         while self.in_background: #All the work is done in input callbacks
             sleep(0.1)
             self.scroll()
@@ -133,7 +128,7 @@ class Menu():
         """ Deactivates the menu completely, exiting it. As for now, pointer state is preserved through menu activations/deactivations """
         self.in_foreground = False
         self.in_background = False
-        logging.info("menu {0} deactivated".format(self.name))    
+        logging.info("menu {0} deactivated".format(self.name))
 
     @to_be_foreground
     def scroll(self):
@@ -143,7 +138,7 @@ class Menu():
                 self.scrolling["pointer"] += 1
                 self.scrolling["counter"] = 0
                 self.refresh()
-            
+
     def reset_scrolling(self):
         self.scrolling["current_finished"] = False
         self.scrolling["pointer"] = 0
@@ -155,20 +150,20 @@ class Menu():
 
     def print_name(self):
         """ A debug method. Useful for hooking up to an input event so that you can see which menu is currently processing input events. """
-        logging.info("Active menu is {0}".format(self.name))    
+        logging.info("Active menu is {0}".format(self.name))
 
     @to_be_foreground
     def move_down(self):
-        """ Moves the pointer one element down, if possible. 
+        """ Moves the pointer one element down, if possible.
         |Is typically used as a callback from input event processing thread.
         |TODO: support going from bottom to top when pressing "down" with last menu element selected."""
         if self.pointer < (len(self._contents)-1):
             logging.debug("moved down")
-            self.pointer += 1  
+            self.pointer += 1
             self.reset_scrolling()
-            self.refresh()    
+            self.refresh()
             return True
-        else: 
+        else:
             return False
 
     @to_be_foreground
@@ -177,15 +172,15 @@ class Menu():
         counter = 5
         while counter != 0 and self.pointer < (len(self._contents)-1):
             logging.debug("moved down")
-            self.pointer += 1  
+            self.pointer += 1
             counter -= 1
-        self.refresh()    
+        self.refresh()
         self.reset_scrolling()
         return True
 
     @to_be_foreground
     def move_up(self):
-        """ Moves the pointer one element up, if possible. 
+        """ Moves the pointer one element up, if possible.
         |Is typically used as a callback from input event processing thread.
         |TODO: support going from top to bottom when pressing "up" with first menu element selected."""
         if self.pointer != 0:
@@ -194,7 +189,7 @@ class Menu():
             self.refresh()
             self.reset_scrolling()
             return True
-        else: 
+        else:
             return False
 
     @to_be_foreground
@@ -203,9 +198,9 @@ class Menu():
         counter = 5
         while counter != 0 and self.pointer != 0:
             logging.debug("moved down")
-            self.pointer -= 1  
+            self.pointer -= 1
             counter -= 1
-        self.refresh()    
+        self.refresh()
         self.reset_scrolling()
         return True
 
@@ -228,7 +223,7 @@ class Menu():
             finally:
                 self.reset_scrolling()
                 if self.exit_exception:
-                    self.deactivate() 
+                    self.deactivate()
                 elif self.in_background: #This check is in place so that you can have an 'exit' element
                     self.to_foreground()
         else:
@@ -273,7 +268,7 @@ class Menu():
     def process_contents(self):
         """Processes contents for custom callbacks. Currently, only 'exit' calbacks are supported.
 
-        If ``self.append_exit`` is set, it goes through the menu and removes every callback which either is ``self.deactivate`` or is just a string 'exit'. 
+        If ``self.append_exit`` is set, it goes through the menu and removes every callback which either is ``self.deactivate`` or is just a string 'exit'.
         |Then, it appends a single ["Exit", 'exit'] element at the end of menu contents. It makes dynamically appending elements to menu easier and makes sure there's only one "Exit" callback, at the bottom of the menu."""
         #Let's fix the pointer if it needs to be fixed
         old_contents = self._contents
@@ -283,7 +278,7 @@ class Menu():
                 self.pointer = len(self._contents) - 1 #Pointer went too far, setting it to last entry available
             else:
                 self.pointer = 0 #No elements, pointer should be 0
-        if self.append_exit: 
+        if self.append_exit:
             element_callbacks = [element[1] if len(element)>1 else None for element in copy(self._contents)]
             for index, callback in enumerate(element_callbacks):
                 if callback == 'exit' or callback == self.deactivate:
@@ -319,7 +314,7 @@ class Menu():
             #print("Last displayed entry is {}".format(self.last_displayed_entry))
         if self.pointer > self.last_displayed_entry:
             #print("Pointer went too far to bottom, correcting")
-            self.first_displayed_entry += self.pointer - self.last_displayed_entry 
+            self.first_displayed_entry += self.pointer - self.last_displayed_entry
             self.last_displayed_entry = self.pointer
             #print("First displayed entry is {}".format(self.first_displayed_entry))
             #print("Last displayed entry is {}".format(self.last_displayed_entry))
@@ -342,7 +337,7 @@ class Menu():
         rendered_entry = []
         entry_content = self._contents[entry_num][0]
         display_columns = self.o.cols
-        if type(entry_content) in [str, unicode]: 
+        if type(entry_content) in [str, unicode]:
             if active:
                 #Scrolling only works with strings for now
                 avail_display_chars = (self.o.cols*self.entry_height)-1 #1 char for "*"/" "

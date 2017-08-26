@@ -2,28 +2,23 @@ from time import sleep
 from copy import copy
 import logging
 
-def to_be_foreground(func): #A safety check wrapper so that certain checks don't get called if menu is not the one active
-    def wrapper(self, *args, **kwargs):
-        if self.in_foreground:
-            return func(self, *args, **kwargs)
-        else:
-            return False
-    return wrapper
+from . import to_be_foreground
+
 
 class Checkbox():
-    """Implements a checkbox which can be used to enable or disable some functions in your application. 
+    """Implements a checkbox which can be used to enable or disable some functions in your application.
 
     Attributes:
 
     * ``contents``: list of checkbox elements which was passed either to ``Checkbox`` constructor or to ``checkbox.set_contents()``.
-       
+
       Checkbox element structure is a list, where:
          * ``element[0]`` (element's representation) is either a string, which simply has the element's value as it'll be displayed, such as "Menu element 1", or, in case of entry_height > 1, can be a list of strings, each of which represents a corresponding display row occupied by the element.
          * ``element[1]`` (element's name) is a name returned by the checkbox upon its exit in a dictionary along with its boolean value.
          * ``element[2]`` (element's state) is the default state assumed by the checkbox. If not present, assumed to be default_state.
 
       *If you want to set contents after the initalisation, please, use set_contents() method.*
-    * ``_contents``: "Working copy" of checkbox contents, basically, a ``contents`` attribute which has been processed by ``self.process_contents``. 
+    * ``_contents``: "Working copy" of checkbox contents, basically, a ``contents`` attribute which has been processed by ``self.process_contents``.
     * ``pointer``: currently selected menu element's number in ``self._contents``.
     * ``in_foreground`` : a flag which indicates if checkbox is currently displayed. If it's not active, inhibits any of menu's actions which can interfere with other menu or UI element being displayed.
     * ``first_displayed_entry`` : Internal flag which points to the number of ``self._contents`` element which is at the topmost position of the checkbox menu as it's currently displayed on the screen
@@ -42,7 +37,7 @@ class Checkbox():
 
     def __init__(self, contents, i, o, name="Menu", entry_height=1, default_state=False, append_exit=True):
         """Initialises the Checkbox object.
-        
+
         Args:
 
             * ``contents``: a list of element descriptions, which can be constructed as described in the Checkbox object's docstring.
@@ -58,6 +53,7 @@ class Checkbox():
         self.i = i
         self.o = o
         self.entry_height = entry_height
+        self.default_state = default_state
         self.append_exit = append_exit
         self.name = name
         self.set_contents(contents)
@@ -66,14 +62,14 @@ class Checkbox():
 
     def to_foreground(self):
         """ Is called when checkboxes ``activate()`` method is used, sets flags and performs all the actions so that checkbox can display its contents and receive keypresses. Also, updates the output device with rendered currently displayed checkbox elements."""
-        logging.info("checkbox {0} enabled".format(self.name))    
+        logging.info("checkbox {0} enabled".format(self.name))
         self.in_foreground = True
         self.refresh()
         self.set_keymap()
 
     def activate(self):
         """ A method which is called when checkbox needs to start operating. Is blocking, sets up input&output devices, renders the checkbox and waits until self.in_background is False, while checkbox callbacks are executed from the input device thread."""
-        logging.info("checkbox {0} activated".format(self.name))    
+        logging.info("checkbox {0} activated".format(self.name))
         self.to_foreground()
         while self.in_foreground: #All the work is done in input callbacks
             sleep(0.1)
@@ -84,7 +80,7 @@ class Checkbox():
     def deactivate(self):
         """ Deactivates the menu completely, exiting it. As for now, pointer state is preserved through checkbox activations/deactivations """
         self.in_foreground = False
-        logging.info("checkbox {0} deactivated".format(self.name))    
+        logging.info("checkbox {0} deactivated".format(self.name))
 
     def print_contents(self):
         """ A debug method. Useful for hooking up to an input event so that you can see the representation of checkbox's contents. """
@@ -92,19 +88,19 @@ class Checkbox():
 
     def print_name(self):
         """ A debug method. Useful for hooking up to an input event so that you can see which UI element is currently processing input events. """
-        logging.info("Active menu is {0}".format(self.name))    
+        logging.info("Active menu is {0}".format(self.name))
 
     @to_be_foreground
     def move_down(self):
-        """ Moves the pointer one element down, if possible. 
+        """ Moves the pointer one element down, if possible.
         |Is typically used as a callback from input event processing thread.
         |TODO: support going from bottom to top when pressing "down" with last checkbox element selected."""
         if self.pointer < (len(self._contents)-1):
             logging.debug("moved down")
-            self.pointer += 1  
-            self.refresh()    
+            self.pointer += 1
+            self.refresh()
             return True
-        else: 
+        else:
             return False
 
     @to_be_foreground
@@ -117,7 +113,7 @@ class Checkbox():
             self.pointer -= 1
             self.refresh()
             return True
-        else: 
+        else:
             return False
 
     @to_be_foreground
@@ -133,7 +129,7 @@ class Checkbox():
                 return
             self.states[self.pointer] = not self.states[self.pointer] #Just inverting.
             self.refresh()
-                
+
     def generate_keymap(self):
         """Sets the keymap. In future, will allow per-system keycode-to-callback tweaking using a config file. """
         keymap = {
@@ -171,11 +167,11 @@ class Checkbox():
     def process_contents(self, contents):
         """Processes contents for custom callbacks. Currently, only 'exit' calbacks are supported.
 
-        If ``self.append_exit`` is set, it goes through the menu and removes every callback which either is ``self.deactivate`` or is just a string 'exit'. 
+        If ``self.append_exit`` is set, it goes through the menu and removes every callback which either is ``self.deactivate`` or is just a string 'exit'.
         |Then, it appends a single ["Exit", '', 'exit'] element at the end of checkbox contents. It makes dynamically appending elements to checkbox easier and makes sure there's only one "Exit" callback, at the bottom of the checkbox."""
         self._contents = contents
         self.states = [element[2] if len(element)>1 else self.default_state for element in copy(self._contents)]
-        if self.append_exit: 
+        if self.append_exit:
             self._contents.append(["Exit", '', 'exit'])
             self.states.append(False)
         logging.debug("{}: menu contents processed".format(self.name))
@@ -204,7 +200,7 @@ class Checkbox():
             #print("Last displayed entry is {}".format(self.last_displayed_entry))
         if self.pointer > self.last_displayed_entry:
             #print("Pointer went too far to bottom, correcting")
-            self.first_displayed_entry += self.pointer - self.last_displayed_entry 
+            self.first_displayed_entry += self.pointer - self.last_displayed_entry
             self.last_displayed_entry = self.pointer
             #print("First displayed entry is {}".format(self.first_displayed_entry))
             #print("Last displayed entry is {}".format(self.last_displayed_entry))
@@ -258,4 +254,3 @@ class Checkbox():
     def set_display_callback(self, callback):
         logging.debug("{0}: display callback set".format(self.name))
         self.display_callback = callback
-

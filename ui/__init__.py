@@ -10,3 +10,13 @@ from char_input import CharArrowKeysInput
 from dialog import DialogBox
 
 from funcs import ellipsize, format_for_screen
+
+
+def to_be_foreground(func):
+    """A safety check wrapper so that certain checks don't get called if menu is not the one active."""
+    def wrapper(self, *args, **kwargs):
+        if self.in_foreground:
+            return func(self, *args, **kwargs)
+        else:
+            return False
+    return wrapper

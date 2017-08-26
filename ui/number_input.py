@@ -2,13 +2,8 @@ from time import sleep
 from copy import copy
 import logging
 
-def to_be_foreground(func): #A safety check wrapper so that certain checks don't get called if menu is not the one active
-    def wrapper(self, *args, **kwargs):
-        if self.in_foreground:
-            return func(self, *args, **kwargs)
-        else:
-            return False
-    return wrapper
+from . import to_be_foreground
+
 
 class IntegerAdjustInput():
     """Implements a simple number input dialog which allows you to increment/decrement a number using  which can be used to navigate through your application, output a list of values or select actions to perform. Is one of the most used elements, used both in system core and in most of the applications.
@@ -31,7 +26,7 @@ class IntegerAdjustInput():
 
     def __init__(self, number, i, o, message="Pick a number:", interval=1, name="IntegerAdjustInput"):
         """Initialises the IntegerAdjustInput object.
-        
+
         Args:
 
             * ``number``: number to be operated on
@@ -58,7 +53,7 @@ class IntegerAdjustInput():
 
     def to_foreground(self):
         """ Is called when ``activate()`` method is used, sets flags and performs all the actions so that UI element can display its contents and receive keypresses. Also, refreshes the screen."""
-        logging.info("{0} enabled".format(self.name))    
+        logging.info("{0} enabled".format(self.name))
         self.in_foreground = True
         self.refresh()
         self.set_keymap()
@@ -67,8 +62,8 @@ class IntegerAdjustInput():
         """ A method which is called when input element needs to start operating. Is blocking, sets up input&output devices, renders the UI element and waits until self.in_background is False, while callbacks are executed from the input device thread.
         This method returns the selected number if KEY_ENTER was pressed, thus accepting the selection.
         This method returns None when the UI element was exited by KEY_LEFT and thus it's assumed changes to the number were not accepted."""
-        logging.info("{0} activated".format(self.name))    
-        self.to_foreground() 
+        logging.info("{0} activated".format(self.name))
+        self.to_foreground()
         while self.in_foreground: #All the work is done in input callbacks
             sleep(0.1)
         logging.debug(self.name+" exited")
@@ -77,7 +72,7 @@ class IntegerAdjustInput():
     def deactivate(self):
         """ Deactivates the UI element, exiting it and thus making activate() return."""
         self.in_foreground = False
-        logging.info("{0} deactivated".format(self.name))    
+        logging.info("{0} deactivated".format(self.name))
 
     def print_number(self):
         """ A debug method. Useful for hooking up to an input event so that you can see current number value. """
@@ -85,26 +80,26 @@ class IntegerAdjustInput():
 
     def print_name(self):
         """ A debug method. Useful for hooking up to an input event so that you can see which UI element is currently processing input events. """
-        logging.info("{0} active".format(self.name))    
+        logging.info("{0} active".format(self.name))
 
     @to_be_foreground
     def decrement(self):
         """Decrements the number by selected ``interval``"""
         self.number -= self.interval
-        self.refresh()    
+        self.refresh()
 
     @to_be_foreground
     def increment(self):
         """Increments the number by selected ``interval``"""
         self.number += self.interval
-        self.refresh()    
+        self.refresh()
 
     @to_be_foreground
     def reset(self):
         """Resets the number, setting it to the number passed to the constructor."""
         logging.debug("Number reset")
         self.number = self.initial_number
-        self.refresh()    
+        self.refresh()
 
     @to_be_foreground
     def select_number(self):

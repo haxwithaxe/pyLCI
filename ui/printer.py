@@ -1,19 +1,20 @@
 from time import sleep
 
+
 def Printer(message, i, o, sleep_time=1, skippable=False):
-    """Outputs string data on display as soon as it's called.                                          
-                                                                               
-    Args:                                                                    
-                                                                             
+    """Outputs string data on display as soon as it's called.
+
+    Args:
+
         * ``message``: A string or list of strings to display. A string will be split into a list, a list will not be modified. The resulting list is then displayed string-by-string.
         * ``i``, ``o``: input&output device objects. If you're not using skippable=True and don't need exit on KEY_LEFT, feel free to pass None as i.
-                                                                             
-    Kwargs:                                                                  
-                                                                                 
+
+    Kwargs:
+
         * ``sleep_time``: Time to display each the message (for each of resulting screens).
         * ``skippable``: If set, allows skipping message screens by presing ENTER.
-                                                                                 
-    """                                                                      
+
+    """
     Printer.skip_screen_flag = False #A flag which is set for skipping screens and is polled while printer is displaying things
     Printer.exit_flag = False #A flag which is set for stopping exiting the printing process completely
 
@@ -53,7 +54,7 @@ def Printer(message, i, o, sleep_time=1, skippable=False):
     for screen_num in range(num_screens):
         Printer.skip_screen_flag = False
         shown_element_numbers = [(screen_num*screen_rows)+i for i in range(screen_rows)]
-        screen_data = [rendered_message[i] for i in shown_element_numbers if i in range(render_length)] 
+        screen_data = [rendered_message[i] for i in shown_element_numbers if i in range(render_length)]
         o.display_data(*screen_data)
         if skippable:
             poll_period = 0.1

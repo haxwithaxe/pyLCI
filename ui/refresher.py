@@ -4,15 +4,10 @@ import logging
 
 from threading import Event
 
+from . import to_be_foreground
+
 #logging.basicConfig(level=logging.DEBUG)
 
-def to_be_foreground(func): #A safety check wrapper so that certain functions don't get called if refresher is not the one active
-    def wrapper(self, *args, **kwargs):
-        if self.in_foreground:
-            return func(self, *args, **kwargs)
-        else:
-            print(func.__name__+" misbehaves")
-    return wrapper
 
 class Refresher():
     """Implements a state where display is refreshed from time to time, updating the screen with information from a function.
@@ -26,7 +21,7 @@ class Refresher():
 
     def __init__(self, refresh_function, i, o, refresh_interval=1, keymap=None, name="Refresher"):
         """Initialises the Refresher object.
-        
+
         Args:
 
             * ``refresh_function``: a function which returns data to be displayed on the screen upon being called, in the format accepted by ``screen.display_data()``
@@ -49,7 +44,7 @@ class Refresher():
 
     def to_foreground(self):
         """ Is called when refresher's ``activate()`` method is used, sets flags and performs all the actions so that refresher can display its contents and receive keypresses."""
-        logging.info("refresher {0} in foreground".format(self.name))    
+        logging.info("refresher {0} in foreground".format(self.name))
         self.in_background.set()
         self.in_foreground = True
         self.refresh()
@@ -58,16 +53,16 @@ class Refresher():
     def to_background(self):
         """ Signals ``activate`` to finish executing """
         self.in_foreground = False
-        logging.info("refresher {0} in background".format(self.name))    
+        logging.info("refresher {0} in background".format(self.name))
 
     def activate(self):
         """ A method which is called when refresher needs to start operating. Is blocking, sets up input&output devices, renders the refresher, periodically calls the refresh function&refreshes the screen while self.in_foreground is True, while refresher callbacks are executed from the input device thread."""
-        logging.info("refresher {0} activated".format(self.name))    
-        self.to_foreground() 
+        logging.info("refresher {0} activated".format(self.name))
+        self.to_foreground()
         counter = 0
         divisor = 2.0
         sleep_time = self.refresh_interval/divisor
-        while self.in_background.isSet(): 
+        while self.in_background.isSet():
             if self.in_foreground:
                 if counter == divisor:
                     counter = 0
@@ -82,22 +77,22 @@ class Refresher():
         """ Deactivates the refresher completely, exiting it."""
         self.in_foreground = False
         self.in_background.clear()
-        logging.info("refresher {0} deactivated".format(self.name))    
+        logging.info("refresher {0} deactivated".format(self.name))
 
     def print_name(self):
         """ A debug method. Useful for hooking up to an input event so that you can see which refresher is currently active. """
-        logging.info("Active refresher is {0}".format(self.name))    
+        logging.info("Active refresher is {0}".format(self.name))
 
     def process_callback(self, func):
         """ Decorates a function to be used by Refresher element.
         |Is typically used as a wrapper for a callback from input event processing thread.
         |After callback's execution is finished, sets the keymap again and refreshes the refresher."""
         def wrapper(*args, **kwargs):
-            self.to_background() 
+            self.to_background()
             func(*args, **kwargs)
             logging.debug("Executed wrapped function: {}".format(func.__name__))
             if self.in_background.isSet():
-                self.to_foreground() 
+                self.to_foreground()
         wrapper.__name__ == func.__name__
         return wrapper
 

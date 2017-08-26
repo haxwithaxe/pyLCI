@@ -3,8 +3,10 @@ import logging
 from time import sleep
 from threading import Event
 
-from menu import Menu, MenuExitException, to_be_foreground
+from menu import Menu, MenuExitException
+from . import to_be_foreground
 from printer import Printer
+
 
 class PathPicker(Menu):
     """#Short description
@@ -20,7 +22,7 @@ class PathPicker(Menu):
 
     def __init__(self, path, i, o, callback = None, display_hidden = False, current_dot = False, prev_dot = True, scrolling=True):
         """Initialises the Menu object.
-        
+
         Args:
 
             * ``path``: a path to start from.
@@ -47,16 +49,16 @@ class PathPicker(Menu):
         self._in_background = Event()
         self.set_contents([]) #Method inherited from Menu and needs an argument, but context is not right
         self.generate_keymap()
-        self.scrolling={"enabled":scrolling,       
-                        "current_finished":False,  
+        self.scrolling={"enabled":scrolling,
+                        "current_finished":False,
                         "current_scrollable":False,
-                        "counter":0,               
-                        "pointer":0}               
+                        "counter":0,
+                        "pointer":0}
 
     def activate(self):
         """ A method which is called when menu needs to start operating. Is blocking, sets up input&output devices, renders the menu and waits until self.in_background is False, while menu callbacks are executed from the input device thread."""
-        logging.info("{0} activated".format(self.name))    
-        self.to_foreground() 
+        logging.info("{0} activated".format(self.name))
+        self.to_foreground()
         while self.in_background: #All the work is done in input callbacks
             sleep(0.1)
             self.scroll()
@@ -65,7 +67,7 @@ class PathPicker(Menu):
 
     @to_be_foreground
     def select_element(self):
-        """ 
+        """
         |Is typically used as a callback from input event processing thread.
         |After callback's execution is finished, sets the keymap again and refreshes the screen.
         |If menu has no elements, exits the menu.
@@ -144,7 +146,7 @@ class PathPicker(Menu):
 
     def option_exit(self):
         self.deactivate()
-        raise MenuExitException #Menu needs to exit when PathPicker exits. It doesn't, of course, as it's in the main loop, so the app's left hanging. 
+        raise MenuExitException #Menu needs to exit when PathPicker exits. It doesn't, of course, as it's in the main loop, so the app's left hanging.
         #One of the reasons MenuExitExceptions are there.
 
     def option_select(self, path):
@@ -152,10 +154,10 @@ class PathPicker(Menu):
         if self.callback is None:
             self.select_path(path)
             self.deactivate()
-            raise MenuExitException 
+            raise MenuExitException
         else:
             self.callback(path)
-            raise MenuExitException 
+            raise MenuExitException
 
     #@to_be_foreground
     def goto_dir(self, dir):
